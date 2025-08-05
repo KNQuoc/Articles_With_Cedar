@@ -1,36 +1,36 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import type { Book } from './index';
+import type { ResearchPaper } from './types';
 
-interface AddBookFormProps {
-  onAddBook: (book: Omit<Book, 'id'>) => void;
+interface AddResearchPaperFormProps {
+  onAddPaper: (paper: Omit<ResearchPaper, 'id'>) => void;
   onCancel: () => void;
 }
 
-export const AddBookForm: React.FC<AddBookFormProps> = ({ onAddBook, onCancel }) => {
+export const AddResearchPaperForm: React.FC<AddResearchPaperFormProps> = ({ onAddPaper, onCancel }) => {
   const [formData, setFormData] = useState({
     title: '',
-    imageUrl: '',
-    bookLink: '',
-    tldr: '',
-    author: '',
-    genre: '',
-    rating: '',
+    authors: '',
+    paperLink: '',
+    abstract: '',
+    journal: '',
+    year: '',
+    doi: '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const bookData = {
+    const paperData = {
       title: formData.title,
-      imageUrl: formData.imageUrl,
-      bookLink: formData.bookLink,
-      tldr: formData.tldr,
-      author: formData.author || undefined,
-      genre: formData.genre || undefined,
-      rating: formData.rating ? parseFloat(formData.rating) : undefined,
-      type: 'book' as const,
+      authors: formData.authors.split(',').map(author => author.trim()).filter(Boolean),
+      paperLink: formData.paperLink,
+      abstract: formData.abstract,
+      journal: formData.journal || undefined,
+      year: formData.year ? parseInt(formData.year) : undefined,
+      doi: formData.doi || undefined,
+      type: 'paper' as const,
     };
-    onAddBook(bookData);
+    onAddPaper(paperData);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -50,12 +50,12 @@ export const AddBookForm: React.FC<AddBookFormProps> = ({ onAddBook, onCancel })
         animate={{ y: 0 }}
         className="bg-gray-900/95 backdrop-blur-md rounded-xl p-6 w-full max-w-md border border-white/20"
       >
-        <h2 className="text-xl font-semibold text-white mb-4">Add New Book</h2>
+        <h2 className="text-xl font-semibold text-white mb-4">Add New Research Paper</h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
-              Book Title *
+              Paper Title *
             </label>
             <input
               type="text"
@@ -64,97 +64,96 @@ export const AddBookForm: React.FC<AddBookFormProps> = ({ onAddBook, onCancel })
               onChange={handleChange}
               required
               className="w-full px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter book title"
+              placeholder="Enter paper title"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
-              Author
+              Authors *
             </label>
             <input
               type="text"
-              name="author"
-              value={formData.author}
-              onChange={handleChange}
-              className="w-full px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter author name"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Cover Image URL *
-            </label>
-            <input
-              type="url"
-              name="imageUrl"
-              value={formData.imageUrl}
+              name="authors"
+              value={formData.authors}
               onChange={handleChange}
               required
               className="w-full px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="https://example.com/book-cover.jpg"
+              placeholder="Author 1, Author 2, Author 3"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
-              Book Link *
+              Paper Link *
             </label>
             <input
               type="url"
-              name="bookLink"
-              value={formData.bookLink}
+              name="paperLink"
+              value={formData.paperLink}
               onChange={handleChange}
               required
               className="w-full px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="https://example.com/book"
+              placeholder="https://arxiv.org/abs/..."
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
-              Genre
+              Journal
             </label>
             <input
               type="text"
-              name="genre"
-              value={formData.genre}
+              name="journal"
+              value={formData.journal}
               onChange={handleChange}
               className="w-full px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., Fiction, Non-fiction, Sci-fi"
+              placeholder="e.g., Nature, Science, arXiv"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
-              Rating (1-5)
+              Year
             </label>
             <input
               type="number"
-              name="rating"
-              value={formData.rating}
+              name="year"
+              value={formData.year}
               onChange={handleChange}
-              min="1"
-              max="5"
-              step="0.1"
+              min="1900"
+              max={new Date().getFullYear()}
               className="w-full px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="4.5"
+              placeholder="2024"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
-              TLDR *
+              DOI
+            </label>
+            <input
+              type="text"
+              name="doi"
+              value={formData.doi}
+              onChange={handleChange}
+              className="w-full px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="10.1000/..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Abstract *
             </label>
             <textarea
-              name="tldr"
-              value={formData.tldr}
+              name="abstract"
+              value={formData.abstract}
               onChange={handleChange}
               required
-              rows={3}
+              rows={4}
               className="w-full px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              placeholder="Brief summary of the book..."
+              placeholder="Brief summary of the research paper..."
             />
           </div>
 
@@ -170,7 +169,7 @@ export const AddBookForm: React.FC<AddBookFormProps> = ({ onAddBook, onCancel })
               type="submit"
               className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
-              Add Book
+              Add Paper
             </button>
           </div>
         </form>

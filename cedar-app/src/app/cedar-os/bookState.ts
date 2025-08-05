@@ -59,6 +59,7 @@ export function useBookState(
                         tldr: 'AI is gathering information about this book...',
                         genre: 'Loading...',
                         rating: 0,
+                        type: 'book',
                     };
 
                     // Add the placeholder book immediately

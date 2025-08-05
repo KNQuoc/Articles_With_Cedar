@@ -41,6 +41,19 @@ const BookSchema = z.object({
   rating: z.number().optional(),
 });
 
+// Define schemas for research paper actions
+const ResearchPaperSchema = z.object({
+  id: z.string().optional(),
+  title: z.string(),
+  authors: z.array(z.string()),
+  paperLink: z.string(),
+  abstract: z.string(),
+  journal: z.string().optional(),
+  year: z.number().optional(),
+  doi: z.string().optional(),
+  type: z.literal('paper'),
+});
+
 // Action schemas for roadmap
 const AddNodeActionSchema = z.object({
   type: z.literal('action'),
@@ -85,6 +98,28 @@ const UpdateBookActionSchema = z.object({
   args: z.array(BookSchema),
 });
 
+// Action schemas for research papers
+const AddResearchPaperActionSchema = z.object({
+  type: z.literal('action'),
+  stateKey: z.literal('researchPapers'),
+  setterKey: z.literal('addResearchPaper'),
+  args: z.array(ResearchPaperSchema),
+});
+
+const RemoveResearchPaperActionSchema = z.object({
+  type: z.literal('action'),
+  stateKey: z.literal('researchPapers'),
+  setterKey: z.literal('removeResearchPaper'),
+  args: z.array(z.string()), // Just the paper ID
+});
+
+const UpdateResearchPaperActionSchema = z.object({
+  type: z.literal('action'),
+  stateKey: z.literal('researchPapers'),
+  setterKey: z.literal('updateResearchPaper'),
+  args: z.array(ResearchPaperSchema),
+});
+
 // Union of all action responses
 export const ActionResponseSchema = z.union([
   AddNodeActionSchema,
@@ -93,6 +128,9 @@ export const ActionResponseSchema = z.union([
   AddBookActionSchema,
   RemoveBookActionSchema,
   UpdateBookActionSchema,
+  AddResearchPaperActionSchema,
+  RemoveResearchPaperActionSchema,
+  UpdateResearchPaperActionSchema,
 ]);
 
 // Final agent response shape – either a plain chat message (content only)

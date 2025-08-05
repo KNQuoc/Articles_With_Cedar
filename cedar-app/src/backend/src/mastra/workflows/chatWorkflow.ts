@@ -7,6 +7,7 @@ import { createWorkflow, createStep } from '@mastra/core/workflows';
 import { z } from 'zod';
 import { productRoadmapAgent } from '../agents/productRoadmapAgent';
 import { bookAgent } from '../agents/bookAgent';
+import { researchPaperAgent } from '../agents/researchPaperAgent';
 import { streamJSONEvent } from '../../utils/streamUtils';
 import { ExecuteFunctionResponseSchema, ActionResponseSchema } from './chatWorkflowTypes';
 
@@ -68,7 +69,7 @@ const buildAgentContext = createStep({
     const { prompt, temperature, maxTokens, streamController } = inputData;
 
     const messages = [
-      { role: 'system' as const, content: 'You MUST respond with structured output using the experimental_output format. When adding books, return both content and action fields in the response object.' },
+      { role: 'system' as const, content: 'You MUST respond with structured output using the experimental_output format. When adding books or research papers, return both content and action fields in the response object.' },
       { role: 'user' as const, content: prompt }
     ];
 
@@ -95,21 +96,45 @@ const callAgent = createStep({
       });
     }
 
-    // Use bookAgent for book-related queries, productRoadmapAgent for roadmap queries
-    const isBookQuery = messages.some(msg =>
-      msg.content.toLowerCase().includes('book') ||
-      msg.content.toLowerCase().includes('add') ||
-      msg.content.toLowerCase().includes('library') ||
-      msg.content.toLowerCase().includes('read') ||
-      msg.content.toLowerCase().includes('author') ||
-      msg.content.toLowerCase().includes('genre')
-    );
+    // Use appropriate agent based on query type
+    const isResearchPaperQuery = messages.some(msg => {
+      const content = msg.content.toLowerCase();
+      // Check for research paper specific terms first
+      return content.includes('research paper') ||
+        content.includes('arxiv') ||
+        content.includes('doi') ||
+        content.includes('journal') ||
+        content.includes('abstract') ||
+        content.includes('academic') ||
+        content.includes('2310.11453'); // Specific arXiv ID
+    });
 
-    const agent = isBookQuery ? bookAgent : productRoadmapAgent;
+    const isBookQuery = messages.some(msg => {
+      const content = msg.content.toLowerCase();
+      // Only detect as book query if it explicitly mentions book AND doesn't mention research paper or arXiv
+      return (content.includes('book') && !content.includes('research paper') && !content.includes('arxiv')) ||
+        (content.includes('add') && !content.includes('paper') && !content.includes('research') && !content.includes('arxiv')) ||
+        (content.includes('library') && !content.includes('paper') && !content.includes('research') && !content.includes('arxiv')) ||
+        content.includes('read') ||
+        content.includes('author') ||
+        content.includes('genre');
+    });
+
+    let agent;
+    // Prioritize research paper queries over book queries when both are detected
+    if (isResearchPaperQuery) {
+      agent = researchPaperAgent;
+    } else if (isBookQuery) {
+      agent = bookAgent;
+    } else {
+      agent = productRoadmapAgent;
+    }
 
     console.log('Using agent:', agent.name);
     console.log('Message content:', messages[0]?.content);
     console.log('Is book query:', isBookQuery);
+    console.log('Is research paper query:', isResearchPaperQuery);
+    console.log('User prompt:', inputData.prompt);
 
     const response = await agent.generate(messages, {
       // If system prompt is provided, overwrite the default system prompt for this agent
