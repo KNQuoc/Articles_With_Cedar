@@ -6,7 +6,7 @@ import Container3D from '@/components/cedar-os/containers/Container3D';
 import Container3DButton from '@/components/cedar-os/containers/Container3DButton';
 import CaptionMessages from '@/components/cedar-os/chatMessages/CaptionMessages';
 import { KeyboardShortcut } from '@/components/cedar-os/ui/KeyboardShortcut';
-import { Bug, CheckCircle, History, Package, Settings, XCircle } from 'lucide-react';
+import { Bug, CheckCircle, History, Package, Settings, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 interface CedarCaptionChatProps {
@@ -25,6 +25,7 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
   showThinking = true,
   stream = true,
 }) => {
+  const [isHidden, setIsHidden] = React.useState(false);
   // Check if there are any nodes with diffs
   const nodesState = useCedarStore((state) => state.registeredStates.nodes);
   const hasDiffs = React.useMemo(() => {
@@ -80,34 +81,42 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
     executeCustomSetter('nodes', 'rejectAllDiffs');
   }, []);
 
+  const toggleChat = useCallback(() => {
+    setIsHidden(prev => !prev);
+  }, []);
+
   return (
-    <FloatingContainer
-      isActive={true}
-      position="bottom-center"
-      dimensions={dimensions}
-      resizable={false}
-      className={`cedar-caption-container ${className}`}
-    >
+    <>
+      {/* Hide/Show Toggle Button - always visible */}
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+        <Container3DButton
+          id="toggle-chat-btn"
+          childClassName="p-2"
+          onClick={toggleChat}
+          className="bg-gray-800/80 backdrop-blur-md border border-white/20"
+        >
+          <span className="flex items-center gap-2 text-white">
+            {isHidden ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            <span className="text-sm font-medium">
+              {isHidden ? 'Show Chat' : 'Hide Chat'}
+            </span>
+          </span>
+        </Container3DButton>
+      </div>
+
+      {/* Main Chat Container - conditionally rendered */}
+      {!isHidden && (
+        <FloatingContainer
+          isActive={true}
+          position="bottom-center"
+          dimensions={dimensions}
+          resizable={false}
+          className={`cedar-caption-container ${className}`}
+        >
       <div className="text-sm">
         {/* Action buttons row */}
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex justify-end items-center mb-2">
           <div className="flex space-x-2">
-            <Container3DButton
-              id="add-feature-btn"
-              childClassName="p-1.5"
-              onClick={handleAddFeature}
-            >
-              <span className="flex items-center gap-1">
-                <Package className="w-4 h-4" />
-                Add Feature
-              </span>
-            </Container3DButton>
-            <Container3DButton id="add-issue-btn" childClassName="p-1.5" onClick={handleAddIssue}>
-              <span className="flex items-center gap-1">
-                <Bug className="w-4 h-4" />
-                Add Bug
-              </span>
-            </Container3DButton>
             {hasDiffs && (
               <>
                 <Container3DButton
@@ -134,8 +143,6 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
                 </Container3DButton>
               </>
             )}
-          </div>
-          <div className="flex space-x-2">
             <Container3DButton id="history-btn" childClassName="p-1.5">
               <span className="flex items-center gap-1">
                 <History className="w-4 h-4" />
@@ -157,6 +164,8 @@ export const CedarCaptionChat: React.FC<CedarCaptionChatProps> = ({
           <ChatInput className="bg-transparent dark:bg-transparent p-0" stream={stream} />
         </Container3D>
       </div>
-    </FloatingContainer>
+        </FloatingContainer>
+      )}
+    </>
   );
 };

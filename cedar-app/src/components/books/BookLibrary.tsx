@@ -19,7 +19,7 @@ export const BookLibrary: React.FC = () => {
       id: '1',
       title: 'The Pragmatic Programmer',
       author: 'David Thomas & Andrew Hunt',
-      imageUrl: 'https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1401432508i/4099.jpg',
+      imageUrl: 'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1401432508i/4099._SX98_.jpg',
       bookLink: 'https://www.goodreads.com/book/show/4099.The_Pragmatic_Programmer',
       tldr: 'A comprehensive guide to software development that covers everything from personal responsibility and career development to practical techniques for keeping code flexible and easy to adapt and reuse.',
       genre: 'Programming',
@@ -30,7 +30,7 @@ export const BookLibrary: React.FC = () => {
       id: '2',
       title: 'Clean Code',
       author: 'Robert C. Martin',
-      imageUrl: 'https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1436202607i/3735293.jpg',
+      imageUrl: 'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1436202607i/3735293._SX98_.jpg',
       bookLink: 'https://www.goodreads.com/book/show/3735293-clean-code',
       tldr: 'A handbook of agile software craftsmanship that teaches you how to write clean, maintainable code that other developers will enjoy working with.',
       genre: 'Programming',
@@ -41,7 +41,7 @@ export const BookLibrary: React.FC = () => {
       id: '3',
       title: 'Design Patterns',
       author: 'Erich Gamma, Richard Helm, Ralph Johnson, John Vlissides',
-      imageUrl: 'https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1348027904i/85009.jpg',
+      imageUrl: 'https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1348027904i/85009._SX98_.jpg',
       bookLink: 'https://www.goodreads.com/book/show/85009.Design_Patterns',
       tldr: 'The definitive guide to object-oriented design patterns, presenting 23 patterns that help designers create more flexible, elegant, and ultimately reusable designs.',
       genre: 'Programming',
@@ -100,6 +100,7 @@ export const BookLibrary: React.FC = () => {
     const newBook = {
       ...bookData,
       id: Date.now().toString(),
+      type: 'book' as const,
     };
     setBooks(prev => [...prev, newBook]);
     setShowAddForm(false);
@@ -115,6 +116,9 @@ export const BookLibrary: React.FC = () => {
   };
 
   const handleItemClick = (item: LibraryItem) => {
+    console.log('Clicked item:', item);
+    console.log('Item type:', item.type);
+    console.log('Item keys:', Object.keys(item));
     setSelectedItem(item);
   };
 
@@ -157,44 +161,7 @@ export const BookLibrary: React.FC = () => {
               <h1 className="text-3xl font-bold text-white">📚 My Library</h1>
               <p className="text-gray-300 mt-1">Discover, organize, and chat about your favorite books and research papers</p>
             </div>
-            <div className="flex gap-3">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowAgenticPaperForm(true)}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
-              >
-                <span>✨</span>
-                Add Paper with AI
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowAddPaperForm(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
-              >
-                <span>+</span>
-                Add Paper
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowAgenticForm(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
-              >
-                <span>✨</span>
-                Add Book with AI
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowAddForm(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
-              >
-                <span>+</span>
-                Add Book
-              </motion.button>
-            </div>
+
           </div>
         </div>
       </div>
@@ -260,7 +227,7 @@ export const BookLibrary: React.FC = () => {
         )}
       </div>
 
-      {/* Item Detail Modal */}
+            {/* Item Detail Modal */}
       <AnimatePresence>
         {selectedItem && (
           <motion.div
@@ -277,7 +244,8 @@ export const BookLibrary: React.FC = () => {
               className="bg-gray-900/95 backdrop-blur-md rounded-xl p-6 w-full max-w-2xl border border-white/20"
               onClick={(e) => e.stopPropagation()}
             >
-              {selectedItem.type === 'book' ? (
+
+                              {('author' in selectedItem && 'imageUrl' in selectedItem) ? (
                 <div className="flex gap-6">
                   <div className="flex-shrink-0">
                     <img
@@ -308,7 +276,7 @@ export const BookLibrary: React.FC = () => {
                     <p className="text-gray-300 mb-4 leading-relaxed">{selectedItem.tldr}</p>
                     <div className="flex gap-3">
                       <button
-                        onClick={(e) => handleBookLinkClick(e, selectedItem)}
+                        onClick={(e) => handleBookLinkClick(e, selectedItem as Book)}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
                       >
                         View Book
@@ -326,7 +294,7 @@ export const BookLibrary: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : ('authors' in selectedItem && 'abstract' in selectedItem) ? (
                 <div className="flex gap-6">
                   <div className="flex-shrink-0">
                     <div className="w-32 h-44 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-lg flex items-center justify-center">
@@ -352,7 +320,7 @@ export const BookLibrary: React.FC = () => {
                     <p className="text-gray-300 mb-4 leading-relaxed">{selectedItem.abstract}</p>
                     <div className="flex gap-3">
                       <button
-                        onClick={(e) => handlePaperLinkClick(e, selectedItem)}
+                        onClick={(e) => handlePaperLinkClick(e, selectedItem as ResearchPaper)}
                         className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
                       >
                         View Paper
@@ -369,6 +337,10 @@ export const BookLibrary: React.FC = () => {
                       </button>
                     </div>
                   </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-white">Unknown item type</p>
                 </div>
               )}
             </motion.div>
