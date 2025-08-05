@@ -1,5 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
+import { arxivAPI } from '../../utils/arxivApi';
 
 // Schema definitions for research paper tools
 const ResearchPaperSchema = z.object({
@@ -211,58 +212,164 @@ export const findArxivPaperTool = createTool({
     execute: async ({ context }) => {
         const { title, author } = context;
 
-        // This tool provides guidance for finding paper information
-        // The AI should use its knowledge to find the best available information
+        try {
+            // Search arXiv for the paper
+            const searchQuery = author ? `ti:"${title}" AND au:"${author}"` : `ti:"${title}"`;
+            const searchResult = await arxivAPI.searchPapers(searchQuery, 5);
 
-        // Common paper patterns for popular papers
-        const commonPapers: Record<string, any> = {
-            'Attention Is All You Need': {
-                authors: ['Ashish Vaswani', 'Noam Shazeer', 'Niki Parmar', 'Jakob Uszkoreit', 'Llion Jones', 'Aidan N. Gomez', 'Łukasz Kaiser', 'Illia Polosukhin'],
-                paperLink: 'https://arxiv.org/abs/1706.03762',
-                abstract: 'The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.',
-                journal: 'Advances in Neural Information Processing Systems',
-                year: 2017,
-                doi: '10.48550/arXiv.1706.03762',
-            },
-            'BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding': {
-                authors: ['Jacob Devlin', 'Ming-Wei Chang', 'Kenton Lee', 'Kristina Toutanova'],
-                paperLink: 'https://arxiv.org/abs/1810.04805',
-                abstract: 'We introduce a new language representation model called BERT, which stands for Bidirectional Encoder Representations from Transformers. Unlike recent language representation models, BERT is designed to pre-train deep bidirectional representations from unlabeled text by jointly conditioning on both left and right context in all layers.',
-                journal: 'North American Chapter of the Association for Computational Linguistics',
-                year: 2019,
-                doi: '10.18653/v1/N19-1423',
-            },
-        };
+            if (searchResult.papers.length > 0) {
+                const paper = searchResult.papers[0];
+                const year = new Date(paper.published).getFullYear();
 
-        // Check if we have known information for this paper
-        const knownPaper = commonPapers[title];
-        if (knownPaper) {
+                return {
+                    success: true,
+                    paper: {
+                        id: paper.id,
+                        title: paper.title,
+                        authors: paper.authors,
+                        paperLink: paper.arxivUrl,
+                        abstract: paper.abstract,
+                        journal: paper.journal,
+                        year: year,
+                        doi: paper.doi,
+                        type: 'paper' as const,
+                    },
+                };
+            }
+
+            // If no exact match found, try a broader search
+            const broaderSearch = await arxivAPI.searchPapers(title, 3);
+            if (broaderSearch.papers.length > 0) {
+                const paper = broaderSearch.papers[0];
+                const year = new Date(paper.published).getFullYear();
+
+                return {
+                    success: true,
+                    paper: {
+                        id: paper.id,
+                        title: paper.title,
+                        authors: paper.authors,
+                        paperLink: paper.arxivUrl,
+                        abstract: paper.abstract,
+                        journal: paper.journal,
+                        year: year,
+                        doi: paper.doi,
+                        type: 'paper' as const,
+                    },
+                };
+            }
+
+            // If still no results, return placeholder
             return {
                 success: true,
                 paper: {
                     id: Date.now().toString(),
                     title: context.title,
-                    ...knownPaper,
-                    type: 'paper',
+                    authors: ['Unknown Authors'],
+                    paperLink: 'https://arxiv.org/abs/placeholder',
+                    abstract: 'Paper not found on arXiv. Information will be provided by the AI agent based on its knowledge.',
+                    journal: 'Unknown Journal',
+                    year: new Date().getFullYear(),
+                    doi: 'Unknown DOI',
+                    type: 'paper' as const,
+                },
+            };
+        } catch (error) {
+            console.error('Error searching arXiv:', error);
+            return {
+                success: true,
+                paper: {
+                    id: Date.now().toString(),
+                    title: context.title,
+                    authors: ['Unknown Authors'],
+                    paperLink: 'https://arxiv.org/abs/placeholder',
+                    abstract: 'Error searching arXiv. Information will be provided by the AI agent based on its knowledge.',
+                    journal: 'Unknown Journal',
+                    year: new Date().getFullYear(),
+                    doi: 'Unknown DOI',
+                    type: 'paper' as const,
                 },
             };
         }
+    },
+});
 
-        // For unknown papers, provide guidance
-        return {
-            success: true,
-            paper: {
-                id: Date.now().toString(),
-                title: context.title,
-                authors: ['Unknown Authors'],
-                paperLink: 'https://arxiv.org/abs/placeholder',
-                abstract: 'Paper information will be provided by the AI agent based on its knowledge.',
-                journal: 'Unknown Journal',
-                year: new Date().getFullYear(),
-                doi: 'Unknown DOI',
-                type: 'paper' as const,
-            },
-        };
+// Get paper information by arXiv ID
+export const getArxivPaperByIdTool = createTool({
+    id: 'get-arxiv-paper-by-id',
+    description: 'Get research paper information from arXiv using the paper ID',
+    inputSchema: z.object({
+        arxivId: z.string().describe('arXiv ID (e.g., 2310.11453) or full arXiv URL'),
+    }),
+    outputSchema: ResearchPaperResponseSchema,
+    execute: async ({ context }) => {
+        const { arxivId } = context;
+
+        console.log('getArxivPaperByIdTool called with arxivId:', arxivId);
+
+        try {
+            // Clean the arXiv ID (remove version suffix and extract from URL if needed)
+            let cleanId = arxivId;
+            if (arxivId.includes('arxiv.org')) {
+                cleanId = arxivId.split('/').pop()?.replace('abs/', '') || arxivId;
+            }
+            cleanId = cleanId.split('v')[0]; // Remove version suffix
+
+            console.log('Cleaned arXiv ID:', cleanId);
+
+            const paper = await arxivAPI.getPaperById(cleanId);
+
+            if (paper) {
+                const year = new Date(paper.published).getFullYear();
+
+                return {
+                    success: true,
+                    paper: {
+                        id: paper.id,
+                        title: paper.title,
+                        authors: paper.authors,
+                        paperLink: paper.arxivUrl,
+                        abstract: paper.abstract,
+                        journal: paper.journal,
+                        year: year,
+                        doi: paper.doi,
+                        type: 'paper' as const,
+                    },
+                };
+            }
+
+            // If paper not found
+            return {
+                success: true,
+                paper: {
+                    id: Date.now().toString(),
+                    title: `Paper ${cleanId}`,
+                    authors: ['Unknown Authors'],
+                    paperLink: `https://arxiv.org/abs/${cleanId}`,
+                    abstract: 'Paper not found on arXiv. Information will be provided by the AI agent based on its knowledge.',
+                    journal: 'arXiv',
+                    year: new Date().getFullYear(),
+                    doi: `10.48550/arXiv.${cleanId}`,
+                    type: 'paper' as const,
+                },
+            };
+        } catch (error) {
+            console.error('Error fetching paper by ID:', error);
+            return {
+                success: true,
+                paper: {
+                    id: Date.now().toString(),
+                    title: `Paper ${arxivId}`,
+                    authors: ['Unknown Authors'],
+                    paperLink: `https://arxiv.org/abs/${arxivId}`,
+                    abstract: 'Error fetching paper from arXiv. Information will be provided by the AI agent based on its knowledge.',
+                    journal: 'arXiv',
+                    year: new Date().getFullYear(),
+                    doi: `10.48550/arXiv.${arxivId}`,
+                    type: 'paper' as const,
+                },
+            };
+        }
     },
 });
 
@@ -275,4 +382,5 @@ export const researchPaperTools = {
     searchResearchPapersTool,
     getResearchPaperInfoTool,
     findArxivPaperTool,
+    getArxivPaperByIdTool,
 }; 
