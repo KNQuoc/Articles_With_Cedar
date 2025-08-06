@@ -14,7 +14,21 @@ import { useResearchPaperState } from '@/app/cedar-os/researchPaperState';
 import type { Book, ResearchPaper, LibraryItem } from './types';
 
 export const BookLibrary: React.FC = () => {
-  const [books, setBooks] = useState<Book[]>([
+  // Load books from localStorage on component mount
+  const [books, setBooks] = useState<Book[]>(() => {
+    // Check if we're in the browser environment
+    if (typeof window !== 'undefined') {
+      const savedBooks = localStorage.getItem('bookLibrary_books');
+      if (savedBooks) {
+        try {
+          return JSON.parse(savedBooks);
+        } catch (error) {
+          console.error('Error loading books from localStorage:', error);
+        }
+      }
+    }
+    // Default books if no saved data or server-side rendering
+    return [
     {
       id: '1',
       title: 'The Pragmatic Programmer',
@@ -48,9 +62,23 @@ export const BookLibrary: React.FC = () => {
       rating: 4.3,
       type: 'book',
     },
-  ]);
+  ];
+  });
 
-  const [researchPapers, setResearchPapers] = useState<ResearchPaper[]>([
+  const [researchPapers, setResearchPapers] = useState<ResearchPaper[]>(() => {
+    // Check if we're in the browser environment
+    if (typeof window !== 'undefined') {
+      const savedPapers = localStorage.getItem('bookLibrary_papers');
+      if (savedPapers) {
+        try {
+          return JSON.parse(savedPapers);
+        } catch (error) {
+          console.error('Error loading papers from localStorage:', error);
+        }
+      }
+    }
+    // Default papers if no saved data or server-side rendering
+    return [
     {
       id: '1',
       title: 'Attention Is All You Need',
@@ -73,7 +101,8 @@ export const BookLibrary: React.FC = () => {
       doi: '10.18653/v1/N19-1423',
       type: 'paper',
     },
-  ]);
+  ];
+  });
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [showAgenticForm, setShowAgenticForm] = useState(false);
@@ -83,6 +112,7 @@ export const BookLibrary: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGenre, setFilterGenre] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'book' | 'paper'>('all');
+  const [isClient, setIsClient] = React.useState(false);
 
   // Register books state with CedarOS
   const executeCustomSetter = useCedarStore.getState().executeCustomSetter;
@@ -95,6 +125,25 @@ export const BookLibrary: React.FC = () => {
   
   // Register research papers state with CedarOS for AI actions
   useResearchPaperState(researchPapers, setResearchPapers);
+
+  // Save books to localStorage whenever books change
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bookLibrary_books', JSON.stringify(books));
+    }
+  }, [books]);
+
+  // Save research papers to localStorage whenever papers change
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bookLibrary_papers', JSON.stringify(researchPapers));
+    }
+  }, [researchPapers]);
+
+  // Set client flag after hydration
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleAddBook = (bookData: Omit<Book, 'id'>) => {
     const newBook = {
@@ -116,9 +165,6 @@ export const BookLibrary: React.FC = () => {
   };
 
   const handleItemClick = (item: LibraryItem) => {
-    console.log('Clicked item:', item);
-    console.log('Item type:', item.type);
-    console.log('Item keys:', Object.keys(item));
     setSelectedItem(item);
   };
 
@@ -149,7 +195,9 @@ export const BookLibrary: React.FC = () => {
     return matchesSearch && matchesType;
   });
 
-  const genres = Array.from(new Set(books.map(book => book.genre).filter(Boolean)));
+  const genres = React.useMemo(() => {
+    return Array.from(new Set(books.map(book => book.genre).filter(Boolean)));
+  }, [books]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
@@ -188,41 +236,55 @@ export const BookLibrary: React.FC = () => {
             <option value="paper">Papers Only</option>
           </select>
           {filterType === 'all' || filterType === 'book' ? (
-            <select
-              value={filterGenre}
-              onChange={(e) => setFilterGenre(e.target.value)}
-              className="px-4 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Genres</option>
-              {genres.map(genre => (
-                <option key={genre} value={genre}>{genre}</option>
-              ))}
-            </select>
+            isClient ? (
+              <select
+                value={filterGenre}
+                onChange={(e) => setFilterGenre(e.target.value)}
+                className="px-4 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Genres</option>
+                {genres.map(genre => (
+                  <option key={genre} value={genre}>{genre}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="px-4 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-white">
+                Loading...
+              </div>
+            )
           ) : null}
         </div>
       </div>
 
       {/* Content Grids */}
       <div className="max-w-7xl mx-auto">
-        {filteredBooks.length > 0 && (
+        {isClient && filteredBooks.length > 0 && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-white mb-4 px-6">📚 Books</h2>
             <BookGrid books={filteredBooks} onBookClick={handleItemClick} />
           </div>
         )}
         
-        {filteredPapers.length > 0 && (
+        {isClient && filteredPapers.length > 0 && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-white mb-4 px-6">📄 Research Papers</h2>
             <ResearchPaperGrid papers={filteredPapers} onPaperClick={handleItemClick} />
           </div>
         )}
 
-        {filteredBooks.length === 0 && filteredPapers.length === 0 && (
+        {isClient && filteredBooks.length === 0 && filteredPapers.length === 0 && (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">📚</div>
             <h3 className="text-xl text-white mb-2">No items found</h3>
             <p className="text-gray-400">Try adjusting your search or add a new book or paper to your library.</p>
+          </div>
+        )}
+
+        {!isClient && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">📚</div>
+            <h3 className="text-xl text-white mb-2">Loading your library...</h3>
+            <p className="text-gray-400">Please wait while we load your books and research papers.</p>
           </div>
         )}
       </div>
